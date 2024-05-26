@@ -2,7 +2,7 @@ import express from "express";
 import { prisma } from "../utils/prisma.util.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-// import authMiddleware from "../middlewares/auth.middleware.js";
+import authMiddleware from "../middlewares/require-access-token.middleware.js";
 
 const router = express.Router();
 const ACCESS_TOKEN_SECRET_KEY = process.env.ACCESS_TOKEN_SECRET_KEY;
@@ -145,4 +145,11 @@ router.post("/sign-in", async (req, res, next) => {
   });
 });
 
+//인증 후 내 정보 조회 api
+router.get("/sign-in", authMiddleware, async (req, res, next) => {
+  // 1. **요청 정보**
+  //     - 사용자 정보는 **인증 Middleware(`req.user`)**를 통해서 전달 받습니다.
+  // 2. **반환 정보**
+  //     - **사용자 ID, 이메일, 이름, 역할, 생성일시, 수정일시**를 반환합니다.
+});
 export default router;
