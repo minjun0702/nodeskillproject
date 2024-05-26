@@ -11,6 +11,28 @@ router.post("/sign-up", async (req, res, next) => {
   try {
     const { email, password, passwordConfirm, name } = req.body;
 
+    // 이메일 형식 체크
+    const emailRegex =
+      /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+      return res
+        .status(400)
+        .json({ error: "이메일 형식이 올바르지 않습니다." });
+    }
+
+    //값입력 확인
+    if (
+      !req.body.email ||
+      !req.body.password ||
+      !req.body.passwordConfirm ||
+      !req.body.name
+    ) {
+      return res
+        .status(400)
+        .json({ error: "모든 필드를 입력해주세요." });
+    }
+
+    //중복 이메일이 있는지 확인
     const emailCheck = await prisma.users.findFirst({
       where: {
         email,
