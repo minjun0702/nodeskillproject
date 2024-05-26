@@ -1,10 +1,11 @@
 import express from "express";
 import { prisma } from "../utils/prisma.util.js";
 import bcrypt from "bcrypt";
-// import jwt from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 // import authMiddleware from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
+const ACCESS_TOKEN_SECRET_KEY = process.env.ACCESS_TOKEN_SECRET_KEY;
 
 // 회원가입 API
 router.post("/sign-up", async (req, res, next) => {
@@ -33,7 +34,7 @@ router.post("/sign-up", async (req, res, next) => {
     }
 
     //중복 이메일이 있는지 확인
-    const emailCheck = await prisma.users.findFirst({
+    const emailCheck = await prisma.Users.findFirst({
       where: {
         email,
       },
@@ -84,6 +85,64 @@ router.post("/sign-up", async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+// 로그인 api / AccessToken 발급
+
+//accesstoken을 만드는 함수
+function createAccessToken(id) {
+  return jwt.sign({ id: id }, ACCESS_TOKEN_SECRET_KEY, {
+    expiresIn: "12h",
+  });
+}
+
+//로그인 api
+router.post("/sign-in", async (req, res, next) => {
+  const { email, password } = req.body;
+
+  //    로그인 정보 중 하나라도 빠진 경우** - “OOO을 입력해 주세요.”
+  if (!req.body.email) {
+    return res.status(400).json({ error: "email을 입력해주세요." });
+  }
+
+  if (!req.body.password) {
+    return res
+      .status(400)
+      .json({ error: "비밀번호를 입력해주세요." });
+  }
+
+  //  이메일 형식에 맞지 않는 경우** - “이메일 형식이 올바르지 않습니다.”
+  const emailRegex =
+    /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (!emailRegex.test(email)) {
+    return res
+      .status(400)
+      .json({ error: "이메일 형식이 올바르지 않습니다." });
+  }
+  //  이메일로 조회되지 않거나 비밀번호가 일치하지 않는 경우** - “인증 정보가 유효하지 않습니다.”
+
+  const emailCheck = await prisma.users.findFirst({
+    where: { email }, //users 테이블 내 email 키에 입력한 email 값이 있는지 확인 후 해당 데이터를 emailCheck 반환
+  });
+
+  if (!emailCheck) {
+    return res
+      .status(401)
+      .json({ message: "존재하지 않는 이메일입니다." });
+  } else if (!(await bcrypt.compare(password, emailCheck.password))) {
+    return res
+      .status(401)
+      .json({ message: "비밀번호가 일치하지 않습니다." });
+  }
+
+  //  AccessToken(Payload에 사용자 ID를 포함하고, 유효기한이 12시간)을 생성합니다.
+  const token = createAccessToken(emailCheck.id);
+
+  //  AccessToken을 반환합니다.
+  res.cookie("Authorization", `Bearer ${token}`);
+  return res.status(200).json({
+    message: "로그인 성공",
+  });
 });
 
 export default router;
