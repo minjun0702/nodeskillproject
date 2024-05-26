@@ -1,17 +1,17 @@
 import jwt from "jsonwebtoken";
-import { prisma } from "../utils/prisma/index.js";
+import { prisma } from "../utils/prisma.util.js";
 
 const ACCESS_TOKEN_SECRET_KEY = process.env.ACCESS_TOKEN_SECRET_KEY;
 
 export default async function (req, res, next) {
   try {
-    const { Authorization } = req.cookies;
+    const { authorization } = req.cookies;
 
-    //     - **Authorization** 또는 **AccessToken이 없는 경우** - “인증 정보가 없습니다.”
-    if (!Authorization) throw new Error("인증 정보가 없습니다.");
+    //  **Authorization** 또는 **AccessToken이 없는 경우** - “인증 정보가 없습니다.”
+    if (!authorization) throw new Error(`인증 정보가 없습니다.`);
 
     // - **JWT 표준 인증 형태와 일치하지 않는 경우** - “지원하지 않는 인증 방식입니다.”
-    const [tokenType, token] = Authorization.split(" "); // 토큰타입 Bearer와 payload를 분리
+    const [tokenType, token] = authorization.split(" "); // 토큰타입 Bearer와 payload를 분리
 
     if (tokenType !== "Bearer")
       throw new Error("지원하지 않는 인증 방식입니다.");
