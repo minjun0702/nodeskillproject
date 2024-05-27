@@ -132,6 +132,7 @@ router.post("/sign-in", async (req, res, next) => {
     const emailCheck = await prisma.users.findFirst({
       where: { email }, //users 테이블 내 email 키에 입력한 email 값이 있는지 확인 후 해당 데이터를 emailCheck 반환
     });
+
     if (!emailCheck) {
       return res
         .status(401)
@@ -161,6 +162,7 @@ router.get("/users", authMiddleware, async (req, res, next) => {
   // 1. **요청 정보**
   try {
     const { userId } = req.user;
+    console.log(userId);
     // 2. **반환 정보**
     //     - **사용자 ID, 이메일, 이름, 역할, 생성일시, 수정일시**를 반환합니다.
     const user = await prisma.users.findFirst({

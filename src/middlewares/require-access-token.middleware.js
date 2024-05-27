@@ -21,9 +21,10 @@ export default async function (req, res, next) {
     // userId 변수가 데이터베이스 users테이블 내 userId 키의 일치한 값이 있는지 확인
     // 없다면 쿠키 삭제 후 에러 메세지 반환
     // - **Payload에 담긴 사용자 ID와 일치하는 사용자가 없는 경우** - “인증 정보와 일치하는 사용자가 없습니다.”
-    const user = await prisma.Users.findFirst({
+    const user = await prisma.users.findFirst({
       where: { userId: +userId },
     });
+
     if (!user) {
       res.clearCookie("authorization");
       throw new Error("인증 정보와 일치하는 사용자가 없습니다.");
