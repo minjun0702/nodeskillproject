@@ -6,7 +6,6 @@ const ACCESS_TOKEN_SECRET_KEY = process.env.ACCESS_TOKEN_SECRET_KEY;
 export default async function (req, res, next) {
   try {
     const { authorization } = req.cookies;
-    console.log("test", authorization);
     //  **Authorization** 또는 **AccessToken이 없는 경우** - “인증 정보가 없습니다.”
     if (!authorization) throw new Error(`인증 정보가 없습니다.`);
 
@@ -17,9 +16,7 @@ export default async function (req, res, next) {
       throw new Error("지원하지 않는 인증 방식입니다.");
 
     const checkToken = jwt.verify(token, ACCESS_TOKEN_SECRET_KEY); // 토큰의payload와 SECRETKEY가 동일하면 해당 데이터를 해석하여 변수로할당
-    console.log(checkToken);
     const userId = checkToken.id; // 해석한 데이터객체 내 userId키의 값을 userId 변수에 할당 / 해당변수는 숫자로 된 문자열
-    console.log(userId);
 
     // userId 변수가 데이터베이스 users테이블 내 userId 키의 일치한 값이 있는지 확인
     // 없다면 쿠키 삭제 후 에러 메세지 반환
