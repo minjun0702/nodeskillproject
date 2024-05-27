@@ -1,4 +1,5 @@
 import express from "express";
+import cookieParser from "cookie-parser";
 import errorMiddleware from "./middlewares/error-handler.middleware.js";
 import UserRouter from "./routers/users.router.js";
 
@@ -6,6 +7,7 @@ const app = express();
 const PORT = 3306;
 
 app.use(express.json());
+app.use(cookieParser());
 app.use("/auth", [UserRouter]);
 app.use(errorMiddleware);
 
