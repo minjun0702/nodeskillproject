@@ -132,7 +132,6 @@ router.post("/sign-in", async (req, res, next) => {
     const emailCheck = await prisma.users.findFirst({
       where: { email }, //users 테이블 내 email 키에 입력한 email 값이 있는지 확인 후 해당 데이터를 emailCheck 반환
     });
-
     if (!emailCheck) {
       return res
         .status(401)
@@ -146,8 +145,7 @@ router.post("/sign-in", async (req, res, next) => {
     }
 
     //  AccessToken(Payload에 사용자 ID를 포함하고, 유효기한이 12시간)을 생성합니다.
-    const token = createAccessToken(emailCheck.id);
-
+    const token = createAccessToken(emailCheck.userId);
     //  AccessToken을 반환합니다.
     res.cookie("authorization", `Bearer ${token}`);
     return res.status(200).json({
@@ -170,9 +168,8 @@ router.get("/users", authMiddleware, async (req, res, next) => {
       select: {
         userId: true,
         email: true,
-        createdAt: true,
-        updatedAt: true,
-        // 1:1 관계를 맺고있는 UserInfos 테이블을 조회합니다.
+        createdAt: true, // users 테이블의 createdAt 필드 선택
+        updatedAt: true, // users 테이블의 updatedAt 필드 선택
         userInfos: {
           select: {
             name: true,
@@ -181,7 +178,17 @@ router.get("/users", authMiddleware, async (req, res, next) => {
         },
       },
     });
-    return res.status(200).json({ data: user });
+
+    const editData = {
+      userId: user.userId,
+      email: user.email,
+      name: user.userInfos.name,
+      role: user.userInfos.role,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+
+    return res.status(200).json({ data: editData });
   } catch (err) {
     next(err);
   }
