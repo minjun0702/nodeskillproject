@@ -30,13 +30,14 @@ model UserInfos {
 
   // Users 테이블과 관계를 설정합니다.
   user Users @relation(fields: [UserId], references: [userId], onDelete: Cascade)
+  resume Resume[]
 
   @@map("UserInfos")
 }
 
 model Resume {
   resumeId     Int      @id @default(autoincrement()) @map("resumeId")
-  UserId       Int      @map("UserId") // 사용자(Users) 테이블을 참조하는 외래키
+  UserId       Int      @map("UserId") // 사용자(Users), 테이블을 참조하는 외래키
   title        String     @map("title")
 	aboutMe      String     @map("aboutMe")
   support      String     @map("support")
@@ -44,7 +45,8 @@ model Resume {
   updatedAt    DateTime @updatedAt @map("updatedAt")
 
   // Users 테이블과 관계를 설정합니다.
-  user Users @relation(fields: [UserId], references: [userId], onDelete: Cascade)
-  
+  user Users @relation(fields: [UserId], references: [userId], onDelete: Cascade, map: "Resume_User_fkey")
+  userInfos UserInfos @relation(fields: [UserId], references: [UserId], map: "Resume_UserInfos_fkey")
+
   @@map("Resume")
 }
