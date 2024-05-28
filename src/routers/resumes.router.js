@@ -121,6 +121,11 @@ router.patch("/resume/:id", authMiddleware, async (req, res, next) => {
         support: true,
         createdAt: true, // users 테이블의 createdAt 필드 선택
         updatedAt: true, // users 테이블의 updatedAt 필드 선택
+        UserInfos: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
 
