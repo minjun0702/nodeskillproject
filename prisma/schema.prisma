@@ -35,7 +35,7 @@ model UserInfos {
 }
 
 model Resume {
-  resumeId     Int      @id @default(autoincrement()) @map("userInfoId")
+  resumeId     Int      @id @default(autoincrement()) @map("resumeId")
   UserId       Int      @map("UserId") // 사용자(Users) 테이블을 참조하는 외래키
   title        String     @map("title")
 	aboutMe      String     @map("aboutMe")
