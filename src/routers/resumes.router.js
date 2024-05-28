@@ -170,7 +170,7 @@ router.patch("/resume/:id", authMiddleware, async (req, res, next) => {
   }
 });
 
-//이력서 삭제 api
+//이력서 삭제 api.
 router.delete("/resume/:id", authMiddleware, async (req, res, next) => {
   try {
     const { userId } = req.user;
