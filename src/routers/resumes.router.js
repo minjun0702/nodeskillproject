@@ -90,4 +90,67 @@ router.get("/resume/:id", authMiddleware, async (req, res, next) => {
   });
 });
 
+//이력서 수정 api
+
+router.patch(
+  "/resume/:id",
+  authMiddleware,
+  async (req, res, next) => {
+    const { userId } = req.user;
+    const { id } = req.params;
+    const { title, aboutMe } = req.body;
+
+    const idcheck = await prisma.Resume.findFirst({
+      where: { AND: [{ UserId: +userId }, { resumeId: +id }] },
+    });
+
+    if (!idcheck) {
+      return res
+        .status(400)
+        .json({ message: "이력서가 존재하지 않습니다." });
+    }
+
+    if (!title || !aboutMe) {
+      return res
+        .status(400)
+        .json({ message: "수정 할 정보를 입력해주세요" });
+    }
+
+    if (aboutMe.length < 150) {
+      return res
+        .status(400)
+        .json({ error: "자기소개는 150자 이상 작성해야 합니다." });
+    } else {
+      const updatedResume = await prisma.Resume.update({
+        where: { resumeId: +id },
+        data: {
+          title,
+          aboutMe,
+          updatedAt: new Date(),
+        },
+        select: {
+          resumeId: true,
+          UserId: true,
+          title: true,
+          aboutMe: true,
+          support: true,
+          createdAt: true, // users 테이블의 createdAt 필드 선택
+          updatedAt: true, // users 테이블의 updatedAt 필드 선택
+          UserInfos: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      });
+
+      return res.status(200).json({
+        status: 200,
+        message: "수정완료 되었습니다.",
+        data: updatedResume,
+      });
+    }
+  },
+);
+
 export default router;
