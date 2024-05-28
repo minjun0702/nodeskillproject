@@ -12,6 +12,21 @@ router.post("/resume", authMiddleware, async (req, res, next) => {
   const { userId } = req.user;
   const { title, aboutMe } = req.body;
 
+  if (!req.body.title) {
+    return res.status(400).json({ error: "제목을 입력해주세요" });
+  }
+
+  if (!req.body.aboutMe) {
+    return res
+      .status(400)
+      .json({ error: "자기소개를 입력해주세요." });
+  }
+  if (aboutMe.length < 150) {
+    return res
+      .status(400)
+      .json({ error: "자기소개는 150자 이상 작성해야 합니다." });
+  }
+
   const Resume = await prisma.Resume.create({
     data: {
       title,
