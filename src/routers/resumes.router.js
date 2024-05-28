@@ -43,6 +43,7 @@ router.post("/resume", authMiddleware, async (req, res, next) => {
   });
 });
 
+// 이력서 전체 조회 api
 router.get("/resume", authMiddleware, async (req, res, next) => {
   try {
     const { userId } = req.user;
@@ -65,6 +66,28 @@ router.get("/resume", authMiddleware, async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+// 이력서 상세 조회 api
+router.get("/resume/:id", authMiddleware, async (req, res, next) => {
+  const { id } = req.params;
+  const { userId } = req.user;
+
+  const idcheck = await prisma.Resume.findFirst({
+    where: { AND: [{ UserId: +userId }, { resumeId: +id }] },
+  });
+
+  if (!idcheck) {
+    return res
+      .status(400)
+      .json({ status: 400, message: "이력서가 존재하지 않습니다." });
+  }
+
+  return res.status(200).json({
+    status: 200,
+    message: "이력서 상세조회를 성공하였습니다.",
+    data: idcheck,
+  });
 });
 
 export default router;
