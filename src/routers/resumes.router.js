@@ -1,5 +1,5 @@
 import express from "express";
-import { prisma } from "../utils/prisma.util.js";
+// import { prisma } from "../utils/prisma.util.js";
 // import bcrypt from "bcrypt";
 // import jwt from "jsonwebtoken";
 import authMiddleware from "../middlewares/require-access-token.middleware.js";

@@ -8,45 +8,57 @@ datasource db {
 }
 
 model Users {
-  userId     Int      @id @default(autoincrement()) @map("userId")
-  email      String   @unique @map("email")
-  password   String   @map("password")
-  createdAt  DateTime @default(now()) @map("createdAt")
-  updatedAt  DateTime @updatedAt @map("updatedAt")
+  userId    Int      @id @default(autoincrement()) @map("user_id")
+  email     String   @unique @map("email")
+  password  String   @map("password")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   userInfos UserInfos?
-  resume Resume[]
+  resume    Resume[]
 
   @@map("Users")
 }
 
 model UserInfos {
-  userInfoId   Int      @id @default(autoincrement()) @map("userInfoId")
-  UserId       Int      @unique @map("UserId") // 사용자(Users) 테이블을 참조하는 외래키
-  name        String     @map("name")
-	role        String     @map("role")
-  createdAt    DateTime @default(now()) @map("createdAt")
-  updatedAt    DateTime @updatedAt @map("updatedAt")
+  userInfoId Int      @id @default(autoincrement()) @map("userInfo_id")
+  UserId     Int      @unique @map("user_id") // 사용자(Users) 테이블을 참조하는 외래키
+  name       String   @map("name")
+  role       UserRole @default(APPLICANT) @map("role")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   // Users 테이블과 관계를 설정합니다.
-  user Users @relation(fields: [UserId], references: [userId], onDelete: Cascade)
-  resume Resume[]
+  userIds Users @relation(fields: [UserId], references: [userId], onDelete: Cascade)
 
   @@map("UserInfos")
 }
 
 model Resume {
-  resumeId     Int      @id @default(autoincrement()) @map("resumeId")
-  UserId       Int      @map("UserId") // 사용자(Users), 테이블을 참조하는 외래키
-  title        String     @map("title")
-	aboutMe      String     @map("aboutMe")
-  support      String     @map("support")
-  createdAt    DateTime @default(now()) @map("createdAt")
-  updatedAt    DateTime @updatedAt @map("updatedAt")
+  resumeId  Int      @id @default(autoincrement()) @map("resume_id")
+  authId    Int      @map("auth_id") // 사용자(Users), 테이블을 참조하는 외래키
+  title     String   @map("title")
+  aboutMe   String   @map("about_me") @db.Text
+  support   Support  @default(APPLY) @map("support")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Users 테이블과 관계를 설정합니다.
-  user Users @relation(fields: [UserId], references: [userId], onDelete: Cascade, map: "Resume_User_fkey")
-  userInfos UserInfos @relation(fields: [UserId], references: [UserId], map: "Resume_UserInfos_fkey")
+  authIds Users @relation(fields: [authId], references: [userId], onDelete: Cascade)
 
   @@map("Resume")
+}
+
+enum UserRole {
+  APPLICANT
+  RECRUITER
+}
+
+enum Support {
+  APPLY
+  DROP
+  PASS
+  INTERVIEW1
+  INTERVIEW2
+  FINAL_APSS
 }

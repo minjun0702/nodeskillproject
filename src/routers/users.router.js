@@ -13,12 +13,9 @@ router.post("/sign-up", async (req, res, next) => {
     const { email, password, passwordConfirm, name } = req.body;
 
     // 이메일 형식 체크
-    const emailRegex =
-      /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(email)) {
-      return res
-        .status(400)
-        .json({ error: "이메일 형식이 올바르지 않습니다." });
+      return res.status(400).json({ error: "이메일 형식이 올바르지 않습니다." });
     }
 
     //값입력 확인
@@ -28,9 +25,7 @@ router.post("/sign-up", async (req, res, next) => {
       !req.body.passwordConfirm ||
       !req.body.name
     ) {
-      return res
-        .status(400)
-        .json({ error: "모든 필드를 입력해주세요." });
+      return res.status(400).json({ error: "모든 필드를 입력해주세요." });
     }
 
     //중복 이메일이 있는지 확인
@@ -41,23 +36,17 @@ router.post("/sign-up", async (req, res, next) => {
     });
 
     if (emailCheck) {
-      return res
-        .status(409)
-        .json({ message: "이미 가입 된 사용자입니다.." });
+      return res.status(409).json({ message: "이미 가입 된 사용자입니다.." });
     }
 
     // 비밀번호 6자리 이상 확인
     if (password.length < 6) {
-      return res
-        .status(400)
-        .json({ error: "비밀번호는 최소 6자리 이상이어야 합니다." });
+      return res.status(400).json({ error: "비밀번호는 최소 6자리 이상이어야 합니다." });
     }
 
     // 비밀번호 일치 확인
     if (password !== passwordConfirm) {
-      return res
-        .status(409)
-        .json({ message: "입력한 두 비밀번호가 일치하지 않습니다." });
+      return res.status(409).json({ message: "입력한 두 비밀번호가 일치하지 않습니다." });
     }
 
     // 사용자 비밀번호를 해시 암호화
@@ -114,18 +103,13 @@ router.post("/sign-in", async (req, res, next) => {
     }
 
     if (!req.body.password) {
-      return res
-        .status(400)
-        .json({ error: "비밀번호를 입력해주세요." });
+      return res.status(400).json({ error: "비밀번호를 입력해주세요." });
     }
 
     //  이메일 형식에 맞지 않는 경우** - “이메일 형식이 올바르지 않습니다.”
-    const emailRegex =
-      /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(email)) {
-      return res
-        .status(400)
-        .json({ error: "이메일 형식이 올바르지 않습니다." });
+      return res.status(400).json({ error: "이메일 형식이 올바르지 않습니다." });
     }
     //  이메일로 조회되지 않거나 비밀번호가 일치하지 않는 경우** - “인증 정보가 유효하지 않습니다.”
 
@@ -133,16 +117,10 @@ router.post("/sign-in", async (req, res, next) => {
       where: { email }, //users 테이블 내 email 키에 입력한 email 값이 있는지 확인 후 해당 데이터를 emailCheck 반환
     });
 
-    if (!emailCheck) {
+    if (!emailCheck || !(await bcrypt.compare(password, emailCheck.password))) {
       return res
         .status(401)
-        .json({ message: "존재하지 않는 이메일입니다." });
-    } else if (
-      !(await bcrypt.compare(password, emailCheck.password))
-    ) {
-      return res
-        .status(401)
-        .json({ message: "비밀번호가 일치하지 않습니다." });
+        .json({ message: "Email 또는 비밀번호가 일치하지 않습니다." });
     }
 
     //  AccessToken(Payload에 사용자 ID를 포함하고, 유효기한이 12시간)을 생성합니다.
