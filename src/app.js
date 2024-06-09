@@ -1,15 +1,16 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import errorMiddleware from "./middlewares/error-handler.middleware.js";
-import UserRouter from "./routers/users.router.js";
-import ResumeRouter from "./routers/resumes.router.js";
+// import UserRouter from "./routers/users.router.js";
+// import ResumeRouter from "./routers/resumes.router.js";
 import { SERVER_PORT } from "./constants/env.constant.js";
+import { apirouter } from "./routers/index.js";
 
 const app = express();
 
 app.use(express.json());
 app.use(cookieParser());
-app.use("/community", [UserRouter, ResumeRouter]);
+app.use("/api", apirouter);
 
 // app.get("/healthy-check", (req, res) => {
 //   return res.status(200).json(`i'm healthy.`);
