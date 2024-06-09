@@ -1,199 +1,208 @@
-// import express from "express";
-// // import { prisma } from "../utils/prisma.util.js";
-// // import bcrypt from "bcrypt";
-// // import jwt from "jsonwebtoken";
-// import authMiddleware from "../middlewares/require-access-token.middleware.js";
+import express from "express";
+import { prisma } from "../utils/prisma.util.js";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { createResumeValidator } from "../middlewares/validators/create-resume-validator.middleware.js";
+import { HTTP_STATUS } from "../constants/http-status.constant.js";
+import { MESSAGES } from "../constants/message.constant.js";
 
-// const router = express.Router();
-// // const ACCESS_TOKEN_SECRET_KEY = process.env.ACCESS_TOKEN_SECRET_KEY;
+export const resumesRouter = express.Router();
 
-// // 이력서 생성 api
-// router.post("/resume", authMiddleware, async (req, res, next) => {
-//   const { userId } = req.user;
-//   const { title, aboutMe } = req.body;
+// 이력서 생성 api
+resumesRouter.post(
+  "/resumes",
+  createResumeValidator,
+  async (req, res, next) => {
+    try {
+      const user = req.user;
+      const { title, aboutMe } = req.body;
+      const authId = user.userId;
 
-//   if (!req.body.title) {
-//     return res.status(400).json({ error: "제목을 입력해주세요" });
-//   }
+      const data = await prisma.resume.create({
+        data: {
+          authId,
+          title,
+          aboutMe,
+        },
+      });
 
-//   if (!req.body.aboutMe) {
-//     return res.status(400).json({ error: "자기소개를 입력해주세요." });
-//   }
-//   if (aboutMe.length < 150) {
-//     return res.status(400).json({ error: "자기소개는 150자 이상 작성해야 합니다." });
-//   }
+      return res.status(HTTP_STATUS.OK).json({
+        status: HTTP_STATUS.OK,
+        message: MESSAGES.RESUMES.CERATE.SUCCEED,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
-//   const Resume = await prisma.Resume.create({
-//     data: {
-//       title,
-//       aboutMe,
-//       support: "APPLY",
-//       UserId: +userId,
-//     },
-//   });
+// 이력서 전체 조회 api
+resumesRouter.get("/resume", async (req, res, next) => {
+  try {
+    const { userId } = req.user;
+    const { sortBy, order } = req.query;
+    const sortField = sortBy || "createdAt";
+    const sortOrder = order === "asc" ? "asc" : "desc";
 
-//   return res.status(201).json({
-//     status: 201,
-//     message: "이력서가 생성되었습니다.",
-//     Resume,
-//   });
-// });
+    const resume = await prisma.resume.findMany({
+      where: { UserId: +userId },
+      include: {
+        userInfos: {
+          select: {
+            name: true, // UserInfos 모델의 name 필드를 선택합니다.
+          },
+        },
+      },
+      orderBy: {
+        [sortField]: sortOrder,
+      },
+    });
 
-// // 이력서 전체 조회 api
-// router.get("/resume", authMiddleware, async (req, res, next) => {
-//   try {
-//     const { userId } = req.user;
-//     const { sortBy, order } = req.query;
-//     const sortField = sortBy || "createdAt";
-//     const sortOrder = order === "asc" ? "asc" : "desc";
+    return res.status(HTTP_STATUS.OK).json({
+      status: HTTP_STATUS.OK,
+      message: MESSAGES.RESUMES.READ_LIST.SUCCEED,
+      //   data: resume,
+      data: resume.map((entry) => ({
+        resumeId: entry.resumeId,
+        UserId: entry.UserId,
+        name: entry.userInfos.name,
+        title: entry.title,
+        aboutMe: entry.aboutMe,
+        support: entry.support,
+        createdAt: entry.createdAt,
+        updatedAt: entry.updatedAt,
+      })),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
-//     const resume = await prisma.resume.findMany({
-//       where: { UserId: +userId },
-//       include: {
-//         userInfos: {
-//           select: {
-//             name: true, // UserInfos 모델의 name 필드를 선택합니다.
-//           },
-//         },
-//       },
-//       orderBy: {
-//         [sortField]: sortOrder,
-//       },
-//     });
+// 이력서 상세 조회 api
+resumesRouter.get("/resume/:id", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.user;
 
-//     return res.status(200).json({
-//       status: 200,
-//       message: "이력서 목록을 성공적으로 가져왔습니다.",
-//       //   data: resume,
-//       data: resume.map((entry) => ({
-//         resumeId: entry.resumeId,
-//         UserId: entry.UserId,
-//         name: entry.userInfos.name,
-//         title: entry.title,
-//         aboutMe: entry.aboutMe,
-//         support: entry.support,
-//         createdAt: entry.createdAt,
-//         updatedAt: entry.updatedAt,
-//       })),
-//     });
-//   } catch (err) {
-//     next(err);
-//   }
-// });
+    const idcheck = await prisma.Resume.findFirst({
+      where: { AND: [{ UserId: +userId }, { resumeId: +id }] },
+      include: {
+        userInfos: {
+          select: {
+            name: true, // UserInfos 모델의 name 필드를 선택합니다.
+          },
+        },
+      },
+    });
 
-// // 이력서 상세 조회 api
-// router.get("/resume/:id", authMiddleware, async (req, res, next) => {
-//   try {
-//     const { id } = req.params;
-//     const { userId } = req.user;
+    if (!idcheck) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
+        status: HTTP_STATUS.BAD_REQUEST,
+        error: "",
+      });
+    }
 
-//     const idcheck = await prisma.Resume.findFirst({
-//       where: { AND: [{ UserId: +userId }, { resumeId: +id }] },
-//       include: {
-//         userInfos: {
-//           select: {
-//             name: true, // UserInfos 모델의 name 필드를 선택합니다.
-//           },
-//         },
-//       },
-//     });
+    return res.status(HTTP_STATUS.OK).json({
+      status: HTTP_STATUS.OK,
+      message: MESSAGES.RESUMES.READ_DETAIL.SUCCEED,
+      data: {
+        resumeId: idcheck.resumeId,
+        UserId: idcheck.UserId,
+        name: idcheck.userInfos.name,
+        title: idcheck.title,
+        aboutMe: idcheck.aboutMe,
+        support: idcheck.support,
+        createdAt: idcheck.createdAt,
+        updatedAt: idcheck.updatedAt,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
-//     if (!idcheck) {
-//       return res
-//         .status(400)
-//         .json({ status: 400, message: "이력서가 존재하지 않습니다." });
-//     }
+//이력서 수정 api
+resumesRouter.patch("/resume/:id", async (req, res, next) => {
+  const { userId } = req.user;
+  const { id } = req.params;
+  const { title, aboutMe } = req.body;
 
-//     return res.status(200).json({
-//       status: 200,
-//       message: "이력서 상세조회를 성공하였습니다.",
-//       data: {
-//         resumeId: idcheck.resumeId,
-//         UserId: idcheck.UserId,
-//         name: idcheck.userInfos.name,
-//         title: idcheck.title,
-//         aboutMe: idcheck.aboutMe,
-//         support: idcheck.support,
-//         createdAt: idcheck.createdAt,
-//         updatedAt: idcheck.updatedAt,
-//       },
-//     });
-//   } catch (err) {
-//     next(err);
-//   }
-// });
+  const idcheck = await prisma.Resume.findFirst({
+    where: { AND: [{ UserId: +userId }, { resumeId: +id }] },
+  });
 
-// //이력서 수정 api
-// router.patch("/resume/:id", authMiddleware, async (req, res, next) => {
-//   const { userId } = req.user;
-//   const { id } = req.params;
-//   const { title, aboutMe } = req.body;
+  if (!idcheck) {
+    return res
+      .status(400)
+      .json({ message: "이력서가 존재하지 않습니다." });
+  }
 
-//   const idcheck = await prisma.Resume.findFirst({
-//     where: { AND: [{ UserId: +userId }, { resumeId: +id }] },
-//   });
+  if (!title || !aboutMe) {
+    return res
+      .status(400)
+      .json({ message: "수정 할 정보를 입력해주세요" });
+  }
 
-//   if (!idcheck) {
-//     return res.status(400).json({ message: "이력서가 존재하지 않습니다." });
-//   }
+  if (aboutMe.length < 150) {
+    return res
+      .status(400)
+      .json({ error: "자기소개는 150자 이상 작성해야 합니다." });
+  } else {
+    const updatedResume = await prisma.Resume.update({
+      where: { resumeId: +id },
+      data: {
+        title,
+        aboutMe,
+        updatedAt: new Date(),
+      },
+      select: {
+        resumeId: true,
+        UserId: true,
+        title: true,
+        aboutMe: true,
+        support: true,
+        createdAt: true, // users 테이블의 createdAt 필드 선택
+        updatedAt: true, // users 테이블의 updatedAt 필드 선택
+      },
+    });
 
-//   if (!title || !aboutMe) {
-//     return res.status(400).json({ message: "수정 할 정보를 입력해주세요" });
-//   }
+    return res.status(HTTP_STATUS.OK).json({
+      status: HTTP_STATUS.OK,
+      message: MESSAGES.RESUMES.UPDATE.SUCCEED,
+      data: updatedResume,
+    });
+  }
+});
 
-//   if (aboutMe.length < 150) {
-//     return res.status(400).json({ error: "자기소개는 150자 이상 작성해야 합니다." });
-//   } else {
-//     const updatedResume = await prisma.Resume.update({
-//       where: { resumeId: +id },
-//       data: {
-//         title,
-//         aboutMe,
-//         updatedAt: new Date(),
-//       },
-//       select: {
-//         resumeId: true,
-//         UserId: true,
-//         title: true,
-//         aboutMe: true,
-//         support: true,
-//         createdAt: true, // users 테이블의 createdAt 필드 선택
-//         updatedAt: true, // users 테이블의 updatedAt 필드 선택
-//       },
-//     });
+//이력서 삭제 api
+resumesRouter.delete("/resume/:id", async (req, res, next) => {
+  try {
+    const { userId } = req.user;
+    const { id } = req.params;
 
-//     return res.status(200).json({
-//       status: 200,
-//       message: "수정완료 되었습니다.",
-//       data: updatedResume,
-//     });
-//   }
-// });
+    const idcheck = await prisma.resume.findFirst({
+      where: { AND: [{ UserId: +userId }, { resumeId: +id }] },
+    });
 
-// //이력서 삭제 api
-// router.delete("/resume/:id", authMiddleware, async (req, res, next) => {
-//   try {
-//     const { userId } = req.user;
-//     const { id } = req.params;
+    if (!idcheck) {
+      return res
+        .status(400)
+        .json({ message: "이력서가 존재하지 않습니다." });
+    }
 
-//     const idcheck = await prisma.resume.findFirst({
-//       where: { AND: [{ UserId: +userId }, { resumeId: +id }] },
-//     });
+    const resumeDelete = await prisma.resume.delete({
+      where: { resumeId: +id },
+    });
 
-//     if (!idcheck) {
-//       return res.status(400).json({ message: "이력서가 존재하지 않습니다." });
-//     }
+    return res.status(HTTP_STATUS.OK).json({
+      status: HTTP_STATUS.OK,
+      message: MESSAGES.RESUMES.DELETE.SUCCEED,
+      data: resumeDelete,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
-//     const resumeDelete = await prisma.resume.delete({
-//       where: { resumeId: +id },
-//     });
-
-//     return res
-//       .status(200)
-//       .json({ status: 200, message: "삭제완료되었습니다.", data: resumeDelete });
-//   } catch (err) {
-//     next(err);
-//   }
-// });
-
-// export default router;
+export default resumesRouter;

@@ -1,11 +1,30 @@
-// import express from "express";
-// import { prisma } from "../utils/prisma.util.js";
-// import bcrypt from "bcrypt";
-// import jwt from "jsonwebtoken";
-// import authMiddleware from "../middlewares/require-access-token.middleware.js";
+import express from "express";
+import { prisma } from "../utils/prisma.util.js";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { requireAccessToken } from "../middlewares/require-access-token.middleware.js";
+import { HTTP_STATUS } from "../constants/http-status.constant.js";
+import { MESSAGES } from "../constants/message.constant.js";
 
-// const router = express.Router();
-// const ACCESS_TOKEN_SECRET_KEY = process.env.ACCESS_TOKEN_SECRET_KEY;
+const userRouter = express.Router();
+
+userRouter.get("/me", requireAccessToken, (req, res, next) => {
+  try {
+    const data = req.user;
+
+    return res
+      .status(HTTP_STATUS.OK)
+      .json({
+        status: HTTP_STATUS.OK,
+        message: MESSAGES.USERS.READ_ME,
+        data,
+      });
+  } catch (error) {
+    next(error);
+  }
+});
+
+export { userRouter };
 
 // // 회원가입 API
 // router.post("/sign-up", async (req, res, next) => {
