@@ -6,4 +6,5 @@ export const HTTP_STATUS = {
   FORBIDDEN: 403, // 인가 실패 UNAUTHORIZED (예 : 접근 권한이 없을 때)
   CONFLICT: 409, // 충돌 발생 (예 : 이메일 중복)
   INTERNAL_SERVER_ERROR: 500, // 예상치 못한 에러
+  NOT_FOUND: 404, // 데이터가 없는 경우
 };
