@@ -6,6 +6,8 @@ import { createResumeValidator } from "../middlewares/validators/create-resume-v
 import { updateResumeValidator } from "../middlewares/validators/update-resume-validator.middleware.js";
 import { HTTP_STATUS } from "../constants/http-status.constant.js";
 import { MESSAGES } from "../constants/message.constant.js";
+import { USER_ROLE } from "../constants/user.constant.js";
+import { requireRoles } from "../middlewares/require-roles.middleware.js";
 
 export const resumesRouter = express.Router();
 
@@ -51,8 +53,23 @@ resumesRouter.get("/", async (req, res, next) => {
       sort = "desc";
     }
 
+    let whereCondition = {};
+    //채용 담당자인 경우
+    // status를 받고, query 조건에 추가
+    // user.role이 RECRUITER과 동일하다면
+    if (user.role === USER_ROLE.RECRUITER) {
+      //req.query로 status 값을 받아서 객체에 할당
+      const { status } = req.query;
+      if (status) {
+        whereCondition.support = status;
+      }
+    } else {
+      //채용 담당자가 아닌 경우 authId만 할당
+      whereCondition.authId = authId;
+    }
+
     let resume = await prisma.Resume.findMany({
-      where: { authId: +resumeUserId },
+      where: whereCondition, //{status : APPLY} << 모든  or {authId = 1} 식으로 나옴
       orderBy: {
         createdAt: sort,
       },
@@ -92,8 +109,13 @@ resumesRouter.get("/:id", async (req, res, next) => {
 
     const { id } = req.params;
 
+    const whereCondition = { resumeId: +id };
+    if (user.role !== USER_ROLE.RECRUITER) {
+      whereCondition.authId = +userId;
+    }
+
     let data = await prisma.Resume.findUnique({
-      where: { resumeId: +id, authId: userId },
+      where: whereCondition,
       include: { authIds: true }, // 스키마에도 User와 연동되어 있는 이름 (true하면 User 정보가따라옴)
     });
 
@@ -203,5 +225,22 @@ resumesRouter.delete("/:id", async (req, res, next) => {
     next(error);
   }
 });
+
+resumesRouter.patch(
+  "/:id/status",
+  requireRoles([USER_ROLE.RECRUITER]),
+  async (req, res, next) => {
+    try {
+      const data = null;
+      return res.status(HTTP_STATUS.OK).json({
+        status: HTTP_STATUS.OK,
+        message: MESSAGES.RESUMES.UPDATE.STATUS.SUCCEED,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 export default resumesRouter;
