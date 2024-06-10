@@ -8,6 +8,7 @@ import { HTTP_STATUS } from "../constants/http-status.constant.js";
 import { MESSAGES } from "../constants/message.constant.js";
 import { USER_ROLE } from "../constants/user.constant.js";
 import { requireRoles } from "../middlewares/require-roles.middleware.js";
+import { statusUpdateResumeValidator } from "../middlewares/validators/statusupdate-resume-validator.middleware.js";
 
 export const resumesRouter = express.Router();
 
@@ -79,7 +80,7 @@ resumesRouter.get("/", async (req, res, next) => {
     });
 
     //원하는 내용만 순회하여 출력
-    resume = resume.map((Resume) => {
+    resume = resume.map(Resume => {
       return {
         id: Resume.resumeId,
         authId: Resume.authIds.name,
@@ -226,16 +227,55 @@ resumesRouter.delete("/:id", async (req, res, next) => {
   }
 });
 
+//이력서 지원 상태 변경
 resumesRouter.patch(
   "/:id/status",
   requireRoles([USER_ROLE.RECRUITER]),
+  statusUpdateResumeValidator,
   async (req, res, next) => {
     try {
-      const data = null;
-      return res.status(HTTP_STATUS.OK).json({
-        status: HTTP_STATUS.OK,
-        message: MESSAGES.RESUMES.UPDATE.STATUS.SUCCEED,
-        data,
+      const user = req.user;
+      const recruiterId = user.userId;
+
+      const { id } = req.params;
+
+      const { support, reason } = req.body;
+
+      //트랜잭션
+      await prisma.$transaction(async tx => {
+        //이력서 정보조회
+        const checkResume = await tx.Resume.findUnique({
+          where: { resumeId: +id },
+        });
+
+        if (!checkResume) {
+          return res.status(HTTP_STATUS.NOT_FOUND).json({
+            status: HTTP_STATUS.NOT_FOUND,
+            message: MESSAGES.RESUMES.COMMON.NOT_FOUNE,
+          });
+        }
+        //이력서 지원 상태 수정
+        const updatedResume = await tx.resume.update({
+          where: { resumeId: +id },
+          data: { support },
+        });
+
+        //이력서 로그 생성
+        const data = await tx.ResumeLog.create({
+          data: {
+            recruiterId,
+            resumesId: checkResume.resumeId,
+            oldStatus: checkResume.support,
+            newStatus: updatedResume.support,
+            reason,
+          },
+        });
+
+        return res.status(HTTP_STATUS.OK).json({
+          status: HTTP_STATUS.OK,
+          message: MESSAGES.RESUMES.UPDATE.STATUS.SUCCEED,
+          data,
+        });
       });
     } catch (error) {
       next(error);

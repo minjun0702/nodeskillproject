@@ -19,6 +19,7 @@ model Users {
 
   userInfos UserInfos?
   resumes   Resume[]
+  resumeLogs ResumeLog[]
 
   @@map("Users")
 }
@@ -47,8 +48,34 @@ model Resume {
 
   // Users 테이블과 관계를 설정합니다.
   authIds Users @relation(fields: [authId], references: [userId], onDelete: Cascade)
+  resumeLogs ResumeLog[]
 
   @@map("Resume")
+}
+
+model ResumeLog {
+  logsId             Int  @id @default(autoincrement()) @map("logs_id")
+  recruiterId        Int  @map("recruiter_id")
+  resumesId           Int  @map("resume_id")
+  oldStatus          ResumeStatus  @map("old_status")
+  newStatus          ResumeStatus  @map("new_status")
+  reason             String
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  recruiter Users @relation(fields : [recruiterId], references : [userId])
+  resume Resume  @relation(fields : [resumesId], references : [resumeId])
+
+  @@map("resume_logs")
+}
+
+
+enum ResumeStatus {
+  APPLY
+  DROP
+  PASS
+  INTERVIEW1
+  INTERVIEW2
+  FINAL_APSS
 }
 
 enum UserRole {
