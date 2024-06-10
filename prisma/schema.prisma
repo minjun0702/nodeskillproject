@@ -13,12 +13,13 @@ model Users {
   email     String   @unique @map("email")
   name      String
   password  String   @map("password")
-  support   Support  @default(APPLY) @map("support")
+  role      UserRole @default(APPLICANT) @map("role")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   userInfos UserInfos?
   resumes   Resume[]
+  resumeLogs ResumeLog[]
 
   @@map("Users")
 }
@@ -27,7 +28,6 @@ model UserInfos {
   userInfoId Int      @id @default(autoincrement()) @map("userInfo_id")
   UserId     Int      @unique @map("user_id") // 사용자(Users) 테이블을 참조하는 외래키
   name       String   @map("name")
-  role       UserRole @default(APPLICANT) @map("role")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
@@ -42,13 +42,40 @@ model Resume {
   authId    Int      @map("auth_id") // 사용자(Users), 테이블을 참조하는 외래키
   title     String   @map("title")
   aboutMe   String   @map("about_me") @db.Text
+  support   Support  @default(APPLY) @map("support")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Users 테이블과 관계를 설정합니다.
   authIds Users @relation(fields: [authId], references: [userId], onDelete: Cascade)
+  resumeLogs ResumeLog[]
 
   @@map("Resume")
+}
+
+model ResumeLog {
+  logsId             Int  @id @default(autoincrement()) @map("logs_id")
+  recruiterId        Int  @map("recruiter_id")
+  resumesId           Int  @map("resume_id")
+  oldStatus          ResumeStatus  @map("old_status")
+  newStatus          ResumeStatus  @map("new_status")
+  reason             String
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  recruiter Users @relation(fields : [recruiterId], references : [userId])
+  resume Resume  @relation(fields : [resumesId], references : [resumeId])
+
+  @@map("resume_logs")
+}
+
+
+enum ResumeStatus {
+  APPLY
+  DROP
+  PASS
+  INTERVIEW1
+  INTERVIEW2
+  FINAL_APSS
 }
 
 enum UserRole {

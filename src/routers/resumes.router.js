@@ -6,6 +6,9 @@ import { createResumeValidator } from "../middlewares/validators/create-resume-v
 import { updateResumeValidator } from "../middlewares/validators/update-resume-validator.middleware.js";
 import { HTTP_STATUS } from "../constants/http-status.constant.js";
 import { MESSAGES } from "../constants/message.constant.js";
+import { USER_ROLE } from "../constants/user.constant.js";
+import { requireRoles } from "../middlewares/require-roles.middleware.js";
+import { statusUpdateResumeValidator } from "../middlewares/validators/statusupdate-resume-validator.middleware.js";
 
 export const resumesRouter = express.Router();
 
@@ -51,8 +54,23 @@ resumesRouter.get("/", async (req, res, next) => {
       sort = "desc";
     }
 
+    let whereCondition = {};
+    //채용 담당자인 경우
+    // status를 받고, query 조건에 추가
+    // user.role이 RECRUITER과 동일하다면
+    if (user.role === USER_ROLE.RECRUITER) {
+      //req.query로 status 값을 받아서 객체에 할당
+      const { status } = req.query;
+      if (status) {
+        whereCondition.support = status;
+      }
+    } else {
+      //채용 담당자가 아닌 경우 authId만 할당
+      whereCondition.authId = authId;
+    }
+
     let resume = await prisma.Resume.findMany({
-      where: { authId: +resumeUserId },
+      where: whereCondition, //{status : APPLY} << 모든  or {authId = 1} 식으로 나옴
       orderBy: {
         createdAt: sort,
       },
@@ -62,7 +80,7 @@ resumesRouter.get("/", async (req, res, next) => {
     });
 
     //원하는 내용만 순회하여 출력
-    resume = resume.map((Resume) => {
+    resume = resume.map(Resume => {
       return {
         id: Resume.resumeId,
         authId: Resume.authIds.name,
@@ -92,8 +110,13 @@ resumesRouter.get("/:id", async (req, res, next) => {
 
     const { id } = req.params;
 
+    const whereCondition = { resumeId: +id };
+    if (user.role !== USER_ROLE.RECRUITER) {
+      whereCondition.authId = +userId;
+    }
+
     let data = await prisma.Resume.findUnique({
-      where: { resumeId: +id, authId: userId },
+      where: whereCondition,
       include: { authIds: true }, // 스키마에도 User와 연동되어 있는 이름 (true하면 User 정보가따라옴)
     });
 
@@ -203,5 +226,61 @@ resumesRouter.delete("/:id", async (req, res, next) => {
     next(error);
   }
 });
+
+//이력서 지원 상태 변경
+resumesRouter.patch(
+  "/:id/status",
+  requireRoles([USER_ROLE.RECRUITER]),
+  statusUpdateResumeValidator,
+  async (req, res, next) => {
+    try {
+      const user = req.user;
+      const recruiterId = user.userId;
+
+      const { id } = req.params;
+
+      const { support, reason } = req.body;
+
+      //트랜잭션
+      await prisma.$transaction(async tx => {
+        //이력서 정보조회
+        const checkResume = await tx.Resume.findUnique({
+          where: { resumeId: +id },
+        });
+
+        if (!checkResume) {
+          return res.status(HTTP_STATUS.NOT_FOUND).json({
+            status: HTTP_STATUS.NOT_FOUND,
+            message: MESSAGES.RESUMES.COMMON.NOT_FOUNE,
+          });
+        }
+        //이력서 지원 상태 수정
+        const updatedResume = await tx.resume.update({
+          where: { resumeId: +id },
+          data: { support },
+        });
+
+        //이력서 로그 생성
+        const data = await tx.ResumeLog.create({
+          data: {
+            recruiterId,
+            resumesId: checkResume.resumeId,
+            oldStatus: checkResume.support,
+            newStatus: updatedResume.support,
+            reason,
+          },
+        });
+
+        return res.status(HTTP_STATUS.OK).json({
+          status: HTTP_STATUS.OK,
+          message: MESSAGES.RESUMES.UPDATE.STATUS.SUCCEED,
+          data,
+        });
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 export default resumesRouter;
