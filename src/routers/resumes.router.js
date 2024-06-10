@@ -3,6 +3,7 @@ import { prisma } from "../utils/prisma.util.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { createResumeValidator } from "../middlewares/validators/create-resume-validator.middleware.js";
+import { updateResumeValidator } from "../middlewares/validators/update-resume-validator.middleware.js";
 import { HTTP_STATUS } from "../constants/http-status.constant.js";
 import { MESSAGES } from "../constants/message.constant.js";
 
@@ -16,11 +17,11 @@ resumesRouter.post(
     try {
       const user = req.user;
       const { title, aboutMe } = req.body;
-      const authId = user.userId;
+      const userId = user.userId;
 
-      const data = await prisma.resume.create({
+      const data = await prisma.Resume.create({
         data: {
-          authId,
+          authId: userId,
           title,
           aboutMe,
         },
@@ -50,14 +51,27 @@ resumesRouter.get("/", async (req, res, next) => {
       sort = "desc";
     }
 
-    const resume = await prisma.Resume.findMany({
+    let resume = await prisma.Resume.findMany({
       where: { authId: +resumeUserId },
       orderBy: {
         createdAt: sort,
       },
       include: {
-        authId: true,
+        authIds: true,
       },
+    });
+
+    //원하는 내용만 순회하여 출력
+    resume = resume.map((Resume) => {
+      return {
+        id: Resume.resumeId,
+        authId: Resume.authIds.name,
+        title: Resume.title,
+        aboutMe: Resume.aboutMe,
+        status: Resume.support,
+        createdAt: Resume.createdAt,
+        updatedAt: Resume.updatedAt,
+      };
     });
 
     return res.status(HTTP_STATUS.OK).json({
@@ -71,42 +85,39 @@ resumesRouter.get("/", async (req, res, next) => {
 });
 
 // 이력서 상세 조회 api
-resumesRouter.get("/resume/:id", async (req, res, next) => {
+resumesRouter.get("/:id", async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const { userId } = req.user;
+    const user = req.user;
+    const userId = user.userId;
 
-    const idcheck = await prisma.Resume.findFirst({
-      where: { AND: [{ UserId: +userId }, { resumeId: +id }] },
-      include: {
-        userInfos: {
-          select: {
-            name: true, // UserInfos 모델의 name 필드를 선택합니다.
-          },
-        },
-      },
+    const { id } = req.params;
+
+    let data = await prisma.Resume.findUnique({
+      where: { resumeId: +id, authId: userId },
+      include: { authIds: true }, // 스키마에도 User와 연동되어 있는 이름 (true하면 User 정보가따라옴)
     });
 
-    if (!idcheck) {
-      return res.status(HTTP_STATUS.BAD_REQUEST).json({
-        status: HTTP_STATUS.BAD_REQUEST,
-        error: "",
+    if (!data) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({
+        status: HTTP_STATUS.NOT_FOUND,
+        error: MESSAGES.RESUMES.COMMON.NOT_FOUNE,
       });
     }
 
+    data = {
+      id: data.resumeId,
+      name: data.authIds.name,
+      status: data.support,
+      title: data.title,
+      aboutMe: data.aboutMe,
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+    };
+
     return res.status(HTTP_STATUS.OK).json({
       status: HTTP_STATUS.OK,
-      message: MESSAGES.RESUMES.READ_DETAIL.SUCCEED,
-      data: {
-        resumeId: idcheck.resumeId,
-        UserId: idcheck.UserId,
-        name: idcheck.userInfos.name,
-        title: idcheck.title,
-        aboutMe: idcheck.aboutMe,
-        support: idcheck.support,
-        createdAt: idcheck.createdAt,
-        updatedAt: idcheck.updatedAt,
-      },
+      message: MESSAGES.RESUMES.READ_LIST.SUCCEED,
+      data,
     });
   } catch (error) {
     next(error);
@@ -114,82 +125,79 @@ resumesRouter.get("/resume/:id", async (req, res, next) => {
 });
 
 //이력서 수정 api
-resumesRouter.patch("/resume/:id", async (req, res, next) => {
-  const { userId } = req.user;
-  const { id } = req.params;
-  const { title, aboutMe } = req.body;
+resumesRouter.put(
+  "/:id",
+  updateResumeValidator,
+  async (req, res, next) => {
+    const user = req.user;
+    const userId = user.userId;
+    const { id } = req.params;
+    const { title, aboutMe } = req.body;
 
-  const idcheck = await prisma.Resume.findFirst({
-    where: { AND: [{ UserId: +userId }, { resumeId: +id }] },
-  });
+    let resumeCheck = await prisma.Resume.findUnique({
+      where: { resumeId: +id, authId: userId },
+      include: { authIds: true },
+    });
 
-  if (!idcheck) {
-    return res
-      .status(400)
-      .json({ message: "이력서가 존재하지 않습니다." });
-  }
+    if (!resumeCheck) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({
+        status: HTTP_STATUS.NOT_FOUND,
+        error: MESSAGES.RESUMES.COMMON.NOT_FOUNE,
+      });
+    }
 
-  if (!title || !aboutMe) {
-    return res
-      .status(400)
-      .json({ message: "수정 할 정보를 입력해주세요" });
-  }
-
-  if (aboutMe.length < 150) {
-    return res
-      .status(400)
-      .json({ error: "자기소개는 150자 이상 작성해야 합니다." });
-  } else {
     const updatedResume = await prisma.Resume.update({
       where: { resumeId: +id },
       data: {
         title,
         aboutMe,
-        updatedAt: new Date(),
-      },
-      select: {
-        resumeId: true,
-        UserId: true,
-        title: true,
-        aboutMe: true,
-        support: true,
-        createdAt: true, // users 테이블의 createdAt 필드 선택
-        updatedAt: true, // users 테이블의 updatedAt 필드 선택
       },
     });
+
+    resumeCheck = {
+      id: resumeCheck.resumeId,
+      name: resumeCheck.authIds.name,
+      status: resumeCheck.support,
+      title: updatedResume.title,
+      aboutMe: updatedResume.aboutMe,
+      createdAt: resumeCheck.createdAt,
+      updatedAt: resumeCheck.updatedAt,
+    };
 
     return res.status(HTTP_STATUS.OK).json({
       status: HTTP_STATUS.OK,
       message: MESSAGES.RESUMES.UPDATE.SUCCEED,
-      data: updatedResume,
+      resumeCheck,
     });
-  }
-});
+  },
+);
 
 //이력서 삭제 api
-resumesRouter.delete("/resume/:id", async (req, res, next) => {
+resumesRouter.delete("/:id", async (req, res, next) => {
   try {
-    const { userId } = req.user;
+    const user = req.user;
+    const userId = user.userId;
     const { id } = req.params;
 
-    const idcheck = await prisma.resume.findFirst({
-      where: { AND: [{ UserId: +userId }, { resumeId: +id }] },
+    let resumeCheck = await prisma.resume.findUnique({
+      where: { resumeId: +id, authId: userId },
     });
 
-    if (!idcheck) {
-      return res
-        .status(400)
-        .json({ message: "이력서가 존재하지 않습니다." });
+    if (!resumeCheck) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({
+        status: HTTP_STATUS.NOT_FOUND,
+        error: MESSAGES.RESUMES.COMMON.NOT_FOUNE,
+      });
     }
 
-    const resumeDelete = await prisma.resume.delete({
+    const data = await prisma.Resume.delete({
       where: { resumeId: +id },
     });
 
     return res.status(HTTP_STATUS.OK).json({
       status: HTTP_STATUS.OK,
       message: MESSAGES.RESUMES.DELETE.SUCCEED,
-      data: resumeDelete,
+      data: { id: data.resumeId },
     });
   } catch (error) {
     next(error);

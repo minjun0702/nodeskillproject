@@ -13,6 +13,7 @@ model Users {
   email     String   @unique @map("email")
   name      String
   password  String   @map("password")
+  support   Support  @default(APPLY) @map("support")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -41,7 +42,6 @@ model Resume {
   authId    Int      @map("auth_id") // 사용자(Users), 테이블을 참조하는 외래키
   title     String   @map("title")
   aboutMe   String   @map("about_me") @db.Text
-  support   Support  @default(APPLY) @map("support")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

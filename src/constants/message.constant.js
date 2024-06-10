@@ -48,6 +48,7 @@ export const MESSAGES = {
         REQUIRED: "제목을 입력해 주세요",
         MIN_LENGTH: "자기소개는 150자 이상을 입력해주세요",
       },
+      NOT_FOUNE: "이력서가 존재하지 않습니다",
     },
     CERATE: {
       SUCCEED: "이력서 생성에 성공했습니다.",
@@ -60,6 +61,7 @@ export const MESSAGES = {
     },
     UPDATE: {
       SUCCEED: "이력서 수정에 성공했습니다.",
+      NO_BODY_DATE: "수정 할 정보를 입력해 주세요",
     },
     DELETE: {
       SUCCEED: "이력서 삭제 성공했습니다.",
