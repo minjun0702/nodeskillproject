@@ -10,7 +10,7 @@ export const resumesRouter = express.Router();
 
 // 이력서 생성 api
 resumesRouter.post(
-  "/resumes",
+  "/",
   createResumeValidator,
   async (req, res, next) => {
     try {
@@ -38,41 +38,32 @@ resumesRouter.post(
 );
 
 // 이력서 전체 조회 api
-resumesRouter.get("/resume", async (req, res, next) => {
+resumesRouter.get("/", async (req, res, next) => {
   try {
-    const { userId } = req.user;
-    const { sortBy, order } = req.query;
-    const sortField = sortBy || "createdAt";
-    const sortOrder = order === "asc" ? "asc" : "desc";
+    const user = req.user;
+    const resumeUserId = user.userId;
 
-    const resume = await prisma.resume.findMany({
-      where: { UserId: +userId },
-      include: {
-        userInfos: {
-          select: {
-            name: true, // UserInfos 모델의 name 필드를 선택합니다.
-          },
-        },
-      },
+    // 기본값을 desc로 설정
+    let { sort } = req.query;
+    sort = sort?.toLowerCase();
+    if (sort !== "desc" && sort !== "asc") {
+      sort = "desc";
+    }
+
+    const resume = await prisma.Resume.findMany({
+      where: { authId: +resumeUserId },
       orderBy: {
-        [sortField]: sortOrder,
+        createdAt: sort,
+      },
+      include: {
+        authId: true,
       },
     });
 
     return res.status(HTTP_STATUS.OK).json({
       status: HTTP_STATUS.OK,
       message: MESSAGES.RESUMES.READ_LIST.SUCCEED,
-      //   data: resume,
-      data: resume.map((entry) => ({
-        resumeId: entry.resumeId,
-        UserId: entry.UserId,
-        name: entry.userInfos.name,
-        title: entry.title,
-        aboutMe: entry.aboutMe,
-        support: entry.support,
-        createdAt: entry.createdAt,
-        updatedAt: entry.updatedAt,
-      })),
+      resume,
     });
   } catch (error) {
     next(error);
