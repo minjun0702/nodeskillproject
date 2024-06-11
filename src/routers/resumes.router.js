@@ -283,4 +283,42 @@ resumesRouter.patch(
   },
 );
 
+// 이력서 로그
+resumesRouter.get(
+  "/:id/logs",
+  requireRoles([USER_ROLE.RECRUITER]),
+  statusUpdateResumeValidator,
+  async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      let data = await prisma.ResumeLog.findMany({
+        where: { resumesId: +id },
+        orderBy: { createdAt: "desc" },
+        include: {
+          recruiter: true,
+        },
+      });
+
+      data = data.map(log => {
+        return {
+          id: log.logsId,
+          recruiterName: log.recruiter.name,
+          resumeId: log.resumesId,
+          oldStatus: log.oldStatus,
+          newStatus: log.newStatus,
+          reason: log.reason,
+          createdAt: log.createdAt,
+        };
+      });
+      return res.status(HTTP_STATUS.OK).json({
+        status: HTTP_STATUS.OK,
+        message: MESSAGES.RESUMES.READ_LIST.LOG.SUCCEED,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
 export default resumesRouter;
