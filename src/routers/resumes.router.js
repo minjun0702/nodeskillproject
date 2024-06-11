@@ -287,10 +287,10 @@ resumesRouter.patch(
 resumesRouter.get(
   "/:id/logs",
   requireRoles([USER_ROLE.RECRUITER]),
-  statusUpdateResumeValidator,
   async (req, res, next) => {
     try {
       const { id } = req.params;
+
       let data = await prisma.ResumeLog.findMany({
         where: { resumesId: +id },
         orderBy: { createdAt: "desc" },
@@ -299,6 +299,7 @@ resumesRouter.get(
         },
       });
 
+      console.log(id);
       data = data.map(log => {
         return {
           id: log.logsId,
@@ -310,6 +311,7 @@ resumesRouter.get(
           createdAt: log.createdAt,
         };
       });
+
       return res.status(HTTP_STATUS.OK).json({
         status: HTTP_STATUS.OK,
         message: MESSAGES.RESUMES.READ_LIST.LOG.SUCCEED,

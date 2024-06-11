@@ -20,6 +20,7 @@ model Users {
   userInfos UserInfos?
   resumes   Resume[]
   resumeLogs ResumeLog[]
+  refreshToken RefreshToken?
 
   @@map("Users")
 }
@@ -66,6 +67,18 @@ model ResumeLog {
   resume Resume  @relation(fields : [resumesId], references : [resumeId])
 
   @@map("resume_logs")
+}
+
+model RefreshToken {
+  tokenId       Int      @id @default(autoincrement()) @map("tokenId")
+  usersId       Int @unique @map("user_id")
+  refreshToken  String? @map("refresh_token")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user Users @relation(fields : [usersId], references : [userId])
+
+  @@map("refresh_tokens")
 }
 
 
